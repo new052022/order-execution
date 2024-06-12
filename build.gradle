@@ -13,6 +13,8 @@ java {
 	}
 }
 
+def mapstructVersion = '1.4.2.Final'
+
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
@@ -34,10 +36,18 @@ dependencies {
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'commons-codec:commons-codec:1.17.0'
+	annotationProcessor ('org.projectlombok:lombok',
+			"org.mapstruct:mapstruct-processor:${mapstructVersion}",
+			'org.projectlombok:lombok-mapstruct-binding:0.2.0')
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testAnnotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	compileOnly "org.mapstruct:mapstruct:${mapstructVersion}"
 }
 
 dependencyManagement {
@@ -48,4 +58,10 @@ dependencyManagement {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+compileJava {
+	options.compilerArgs += ['-Amapstruct.defaultComponentModel=spring',
+							 '-Amapstruct.suppressGeneratorVersionInfoComment=true',
+							 '-Amapstruct.verbose=true']
 }
