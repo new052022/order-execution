@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Slf4j
-@Service("Binance")
+@Service("Binance-client")
 @RequiredArgsConstructor
 public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 }
