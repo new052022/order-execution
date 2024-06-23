@@ -1,1 +1,39 @@
-spring.application.name=order-execution
+server:
+  port: 9002
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+
+spring:
+  application:
+    name: order-execution-service
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    liquibase:
+      enabled: true
+      drop-first: false
+      change-log: classpath:db/changelog/db.changelog-master.yaml
+      default-schema: public
+  datasource:
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASS}
+    url: jdbc:postgresql://${DB_HOST}/order_execution
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+exchange-url:
+  bingx-perpetual: https://open-api.bingx.com
+  binance-perpetual:
+    v1: https://fapi.binance.com/fapi/v1
+
+secret-key: ${SECRET_NUMBER}
+
+algorithm: ${ALGORITHM}
