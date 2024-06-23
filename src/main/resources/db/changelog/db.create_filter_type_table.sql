@@ -20,7 +20,9 @@ create table orders
     good_till_date varchar(255),
     recw_window varchar(255),
     exchange varchar(255),
-    is_executed boolean default false
+    side varchar(255),
+    is_executed boolean default false,
+    updated_date timestamp
 );
 
 
