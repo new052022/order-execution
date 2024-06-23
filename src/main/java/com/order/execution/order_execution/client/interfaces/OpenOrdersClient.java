@@ -5,6 +5,6 @@ import com.order.execution.order_execution.dto.OrderResponseDto;
 
 public interface OpenOrdersClient {
 
-    public OrderResponseDto createPerpetualOrder(CreateOrderRequestDto dto);
+    OrderResponseDto createPerpetualOrder(CreateOrderRequestDto dto);
 
 }

@@ -25,8 +25,13 @@ public class BinanceExecuteOrderServiceImpl implements ExecuteOrderService {
     @Override
     public OrderResponseDto handleOrderRequest(CreateOrderRequestDto dto) {
         Order order = orderMapper.toOrder(dto);
-        orderService.saveOrder(order);
-        return openOrdersClient.createPerpetualOrder(dto);
+        Order savedOrder = orderService.saveOrder(order);
+        OrderResponseDto perpetualOrder = openOrdersClient.createPerpetualOrder(dto);
+        if (perpetualOrder != null) {
+            savedOrder.setIsExecuted(true);
+            orderService.saveOrder(savedOrder);
+        }
+        return perpetualOrder;
     }
 
     @Autowired
