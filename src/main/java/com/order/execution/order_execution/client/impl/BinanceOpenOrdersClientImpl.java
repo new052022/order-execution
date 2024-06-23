@@ -22,7 +22,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
-    private final String PERPETUAL_MARKET_ORDER_URL = "https://fapi.binance.com/fapi/v1";
+    private final static String PERPETUAL_MARKET_ORDER_URL = "https://fapi.binance.com/fapi/v1";
 
     public static final String ORDER = "/order";
 
@@ -51,10 +51,10 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
                     PERPETUAL_MARKET_ORDER_URL + ORDER + DELIMETER + params + SIGNATURE + signature, HttpMethod.POST, entity,
                     OrderResponseDto.class).getBody();
         } catch (Exception e) {
-            log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder | Failed order response: {}",
+            log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder (Binance) | Failed order response: {}",
                     Timestamp.from(Instant.now()), e.getMessage());
         }
-        log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder | open order response: {} | action: {}",
+        log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder (Binance) | open order response: {} | action: {}",
                 Timestamp.from(Instant.now()), dto, "send order to API Binance");
         return order;
     }

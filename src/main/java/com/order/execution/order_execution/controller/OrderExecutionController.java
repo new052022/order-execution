@@ -19,7 +19,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/Order-execution")
+@RequestMapping("/order-execution")
 @Tag(name = "Order-execution controller")
 public class OrderExecutionController {
 
