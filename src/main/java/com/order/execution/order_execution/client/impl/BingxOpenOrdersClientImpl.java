@@ -49,12 +49,11 @@ public class BingxOpenOrdersClientImpl implements OpenOrdersClient {
         HttpEntity<Object> entity = new HttpEntity<>(httpHeaders);
         OrderResponseDto data = null;
         try {
-            String response = Objects.requireNonNull(restTemplate.exchange(
+            data = Objects.requireNonNull(restTemplate.exchange(
                     requestUrl,
                     HttpMethod.POST,
                     entity,
-                    String.class).getBody());
-            System.out.println(response);
+                    OrderResponseDto.class).getBody());
         } catch (Exception e) {
             log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder (Bingx) | Failed order response: {}",
                     Timestamp.from(Instant.now()), e.getMessage());
