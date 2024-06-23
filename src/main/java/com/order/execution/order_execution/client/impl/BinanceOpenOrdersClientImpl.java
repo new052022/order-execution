@@ -45,9 +45,15 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         String signature = SignatureGenerator.generateSignature(privateKey, params);
         HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(dto.getApiKey()));
         HttpEntity<Object> entity = new HttpEntity<>(headers);
-        OrderResponseDto order = restTemplate.exchange(
-                PERPETUAL_MARKET_ORDER_URL + ORDER + DELIMETER + params + SIGNATURE + signature, HttpMethod.POST, entity,
-                OrderResponseDto.class).getBody();
+        OrderResponseDto order = null;
+        try {
+            order = restTemplate.exchange(
+                    PERPETUAL_MARKET_ORDER_URL + ORDER + DELIMETER + params + SIGNATURE + signature, HttpMethod.POST, entity,
+                    OrderResponseDto.class).getBody();
+        } catch (Exception e) {
+            log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder | Failed order response: {}",
+                    Timestamp.from(Instant.now()), e.getMessage());
+        }
         log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder | open order response: {} | action: {}",
                 Timestamp.from(Instant.now()), dto, "send order to API Binance");
         return order;
