@@ -1,6 +1,6 @@
 pipeline {
     environment {
-        registry = "moritz007/execution-order"
+        registry = "moritz007/order-execution"
         registryCredential = 'docker-hub-credentials'
     }
     tools {
@@ -15,11 +15,11 @@ pipeline {
                 script {
                     sh '''
                     echo "Stopping and removing old containers..."
-                    docker ps -a --filter ancestor=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker stop || true
-                    docker ps -a --filter ancestor=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker rm -f || true
+                    docker ps -a --filter ancestor=moritz007/order-execution --format "{{.ID}}" | xargs --no-run-if-empty docker stop || true
+                    docker ps -a --filter ancestor=moritz007/order-execution --format "{{.ID}}" | xargs --no-run-if-empty docker rm -f || true
 
                     echo "Removing old images..."
-                    docker images --filter reference=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker rmi -f || true
+                    docker images --filter reference=moritz007/order-execution --format "{{.ID}}" | xargs --no-run-if-empty docker rmi -f || true
                     '''
                 }
             }
@@ -91,7 +91,7 @@ pipeline {
                 script {
                     sh '''
                     echo "Cleaning up old images..."
-                    docker images --filter reference=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker rmi -f || true
+                    docker images --filter reference=moritz007/order-execution --format "{{.ID}}" | xargs --no-run-if-empty docker rmi -f || true
                     '''
                 }
             }
