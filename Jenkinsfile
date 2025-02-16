@@ -1,69 +1,100 @@
 pipeline {
-environment {
-registry = "monacobot/order-execution-service"
-registryCredential = 'docker-id'
-dockerImage = ''
-}
-
-agent {
-  label 'built-in'
-}
-stages {   
-stage('Cloning our Git') {
- steps {
-        git branch: 'develop', // Specify develop branch
-           url: 'https://github.com/new052022/order-execution.git'
+    environment {
+        registry = "moritz007/execution-order"
+        registryCredential = 'docker-hub-credentials'
     }
-}
-stage('Building the application') {
-      steps {
-        script {
-          // Execute Gradle command within the workspace
-           sh './gradlew bootBuildImage'
-        }
-      }
-}
-stage('Building our image') {
-steps{
-script {
-    def dockerHome = tool 'docker'
-        env.PATH = "${dockerHome}/bin:${env.PATH}"
-dockerImage = docker.build registry + ":$BUILD_NUMBER"
-}
-}
-}
-stage('Pushing the image to Docker Hub') {
+    tools {
+        jdk 'JDK 21'
+    }
+    agent {
+        label 'built-in'
+    }
+    stages {
+        stage('Clean old containers') {
             steps {
                 script {
-                    // Use docker.withRegistry with your registry credential ID
-                    docker.withRegistry('https://registry.hub.docker.com', registryCredential) {
+                    sh '''
+                    echo "Stopping and removing old containers..."
+                    docker ps -a --filter ancestor=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker stop || true
+                    docker ps -a --filter ancestor=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker rm -f || true
+
+                    echo "Removing old images..."
+                    docker images --filter reference=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker rmi -f || true
+                    '''
+                }
+            }
+        }
+
+        stage('Cloning our Git') {
+            steps {
+                git branch: 'develop', url: 'https://github.com/new052022/order-execution.git'
+            }
+        }
+
+        stage('Building the application') {
+            steps {
+                script {
+                    sh './gradlew bootBuildImage'
+                }
+            }
+        }
+
+        stage('Building our image') {
+            steps {
+                script {
+                    dockerImage = docker.build("${registry}:${BUILD_NUMBER}")
+                }
+            }
+        }
+
+        stage('Pushing the image to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
                         dockerImage.push()
                     }
                 }
             }
-}
-stage('Deploy our image') {
-   steps {
-        script {
-           
-            def imageName = registry + ":$BUILD_NUMBER"
-            def postgresUser = env.POSTGRES_USER
-            def postgresPass = env.POSTGRES_PASS
-            def dbHost = env.DB_HOST
-            def secretNumber = env.SECRET_NUMBER
-            def algorithm = env.ALGORITHM
-          sh 'docker ps -f name=order-execution-service -q | xargs --no-run-if-empty docker container stop'
-sh 'docker container ls -a -fname=order-execution-service -q | xargs -r docker container rm'
-          sh """
-docker run -d --name order-execution-service -p 9002:9002 -e POSTGRES_USER=${postgresUser} -e POSTGRES_PASS=${postgresPass} -e DB_HOST=${dbHost} -e SECRET_NUMBER=${secretNumber} -e ALGORITHM=${algorithm} ${imageName}
-"""
         }
+
+        stage('Deploy our image') {
+            steps {
+                script {
+                    withEnv([
+                        "POSTGRES_USER=${env.POSTGRES_USER}",
+                        "POSTGRES_PASS=${env.POSTGRES_PASS}",
+                        "DB_HOST=${env.DB_HOST}",
+                        "SECRET_NUMBER=${env.SECRET_NUMBER}",
+                        "ALGORITHM=${env.ALGORITHM}"
+                    ]) {
+                        sh '''
+                        echo "Stopping and removing previous container..."
+                        docker ps -f name=order-execution -q | xargs --no-run-if-empty docker stop || true
+                        docker ps -a -f name=order-execution -q | xargs --no-run-if-empty docker rm -f || true
+
+                        echo "Deploying new container..."
+                        docker run -d --name order-execution -p 9002:9002 \
+                            -e POSTGRES_USER="$POSTGRES_USER" \
+                            -e POSTGRES_PASS="$POSTGRES_PASS" \
+                            -e DB_HOST="$DB_HOST" \
+                            -e SECRET_NUMBER="$SECRET_NUMBER" \
+                            -e ALGORITHM="$ALGORITHM" \
+                            ${registry}:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Cleaning up') {
+            steps {
+                script {
+                    sh '''
+                    echo "Cleaning up old images..."
+                    docker images --filter reference=moritz007/execution-order --format "{{.ID}}" | xargs --no-run-if-empty docker rmi -f || true
+                    '''
+                }
+            }
+        }
+    }
 }
-}
-stage('Cleaning up') {
-steps{
-sh "docker rmi $registry:$BUILD_NUMBER"
-}
-}
-}
-} 

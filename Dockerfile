@@ -1,8 +1,8 @@
-FROM openjdk:21-jdk
+FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
-COPY /build/libs/order-execution-0.0.1-SNAPSHOT.jar app.jar
+COPY build/libs/execution-order-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 9002
 
