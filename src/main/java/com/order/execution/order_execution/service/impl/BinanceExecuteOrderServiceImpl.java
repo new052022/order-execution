@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 @Service("Binance")
 @RequiredArgsConstructor
 public class BinanceExecuteOrderServiceImpl implements ExecuteOrderService {
@@ -27,7 +29,7 @@ public class BinanceExecuteOrderServiceImpl implements ExecuteOrderService {
         Order order = orderMapper.toOrder(dto);
         Order savedOrder = orderService.saveOrder(order);
         OrderResponseDto perpetualOrder = openOrdersClient.createPerpetualOrder(dto);
-        if (perpetualOrder != null) {
+        if (Objects.nonNull(perpetualOrder)) {
             savedOrder.setIsExecuted(true);
             orderService.saveOrder(savedOrder);
         }
