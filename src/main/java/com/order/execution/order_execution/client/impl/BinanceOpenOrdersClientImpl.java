@@ -2,6 +2,7 @@ package com.order.execution.order_execution.client.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
+import com.order.execution.order_execution.dto.AccountBalanceDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OpenPositionResponseDto;
@@ -37,6 +38,8 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     private final static String GENERAL_BINANCE_API = "https://fapi.binance.com";
 
+    private final static String BALANCE = "/fapi/v2/balance";
+
     public static final String ORDER = "/order";
 
     public static final String DELIMETER = "?";
@@ -47,7 +50,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     public static final String API_KEY_NAME = "X-MBX-APIKEY";
 
-    private static final String OPEN_ORDERS_URL = "/openOrders";
+    private static final String OPEN_ORDERS_URL = "/fapi/v1/openOrders";
 
     private static final String OPEN_POSITIONS_URL = "/fapi/v3/positionRisk";
 
@@ -56,6 +59,25 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
     private final EncryptDecryptGenerator encryptDecryptGenerator;
 
     private final QueryParamsGenerator queryParamsGenerator;
+
+    @Override
+    @SneakyThrows
+    public List<AccountBalanceDto> getBalances(String encodedSecretKey, String encodedApiKey){
+        String time = "" + new Timestamp(System.currentTimeMillis()).getTime();
+        String secretKey = encryptDecryptGenerator.decryptData(encodedSecretKey);
+        String apiKey = encryptDecryptGenerator.decryptData(encodedApiKey);
+        String params = this.getOpenOrdersParams(secretKey, time);
+        String requestUrl = this.getRequestUrl(BALANCE, params);
+        HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, apiKey);
+        String openOrdersResponse = restTemplate.exchange(
+                requestUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
+        List<AccountBalanceDto> ordersList = objectMapper.readValue(openOrdersResponse,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, OpenOrdersResponseDto.class));
+        log.info("[TRADING BOT] Time: {} | Order-service | getBalances" +
+                        " | number of assets in balance : {} | action: {}",
+                Timestamp.from(Instant.now()), ordersList.size(), "fetch account balances");
+        return ordersList;
+    }
 
     @Override
     @SneakyThrows

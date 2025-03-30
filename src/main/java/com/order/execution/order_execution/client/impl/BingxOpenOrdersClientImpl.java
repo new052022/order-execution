@@ -1,6 +1,7 @@
 package com.order.execution.order_execution.client.impl;
 
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
+import com.order.execution.order_execution.dto.AccountBalanceDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OpenPositionResponseDto;
@@ -39,6 +40,11 @@ public class BingxOpenOrdersClientImpl implements OpenOrdersClient {
     private final QueryParamsGenerator queryParamsGenerator;
 
     private final RestTemplate restTemplate;
+
+    @Override
+    public List<AccountBalanceDto> getBalances(String encodedSecretKey, String encodedApiKey) {
+        return List.of();
+    }
 
     @Override
     public OrderResponseDto createPerpetualOrder(CreateOrderRequestDto dto) {

@@ -1,7 +1,8 @@
 package com.order.execution.order_execution.controller;
 
+import com.order.execution.order_execution.dto.AccountBalanceDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
-import com.order.execution.order_execution.dto.GetOpenOrdersRequestDto;
+import com.order.execution.order_execution.dto.GetAssetsDataRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OpenPositionResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
@@ -39,15 +40,21 @@ public class OrderExecutionController {
     }
 
     @PostMapping("/open-orders")
-    public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestBody GetOpenOrdersRequestDto request){
+    public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestBody GetAssetsDataRequestDto request){
         return ResponseEntity.ok(executeOrderServiceMap.get(request.getExchange())
                 .handleOrderRequest(request.getEncodedApiKey(), request.getEncodedSecretKey()));
     }
 
     @PostMapping("/open-positions")
-    public ResponseEntity<List<OpenPositionResponseDto>> getOpenPositions(@RequestBody GetOpenOrdersRequestDto request){
+    public ResponseEntity<List<OpenPositionResponseDto>> getOpenPositions(@RequestBody GetAssetsDataRequestDto request){
         return ResponseEntity.ok(executeOrderServiceMap.get(request.getExchange())
                 .handlePositionRequest(request.getEncodedApiKey(), request.getEncodedSecretKey()));
+    }
+
+    @PostMapping("/balance")
+    public ResponseEntity<List<AccountBalanceDto>> getAccountBalances(@RequestBody GetAssetsDataRequestDto request){
+        return ResponseEntity.ok(executeOrderServiceMap.get(request.getExchange())
+                .handleAccountBalancesRequest(request.getEncodedApiKey(), request.getEncodedSecretKey()));
     }
 
 }
