@@ -2,6 +2,7 @@ package com.order.execution.order_execution.service.impl;
 
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
+import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.mapper.OrderMapper;
 import com.order.execution.order_execution.model.Order;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service("Binance")
@@ -34,6 +36,11 @@ public class BinanceExecuteOrderServiceImpl implements ExecuteOrderService {
             orderService.saveOrder(savedOrder);
         }
         return perpetualOrder;
+    }
+
+    @Override
+    public List<OpenOrdersResponseDto> handleOrderRequest(String encodedApiKey, String encodedSecretKey) {
+        return openOrdersClient.getOpenOrders(encodedSecretKey, encodedApiKey);
     }
 
     @Autowired

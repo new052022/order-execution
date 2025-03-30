@@ -1,19 +1,23 @@
 package com.order.execution.order_execution.controller;
 
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
+import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.service.interfaces.ExecuteOrderService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -32,6 +36,14 @@ public class OrderExecutionController {
                 Timestamp.from(Instant.now()), dto.getSymbol(), dto.getQuantity(),
                 dto.getPrice()," CreateOrderRequestDto is in Order execution service.");
         return ResponseEntity.ok(executeOrderServiceMap.get(dto.getExchange()).handleOrderRequest(dto));
+    }
+
+
+    @GetMapping("/open-orders")
+    public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestParam String encodedApiKey,
+                                                                     @RequestParam String encodedSecretKey,
+                                                                     @RequestParam String exchange) {
+        return ResponseEntity.ok(executeOrderServiceMap.get(exchange).handleOrderRequest(encodedSecretKey, encodedApiKey));
     }
 
 }

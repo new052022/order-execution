@@ -2,6 +2,7 @@ package com.order.execution.order_execution.client.impl;
 
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
+import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.util.EncryptDecryptGenerator;
 import com.order.execution.order_execution.util.binance.QueryParamsGenerator;
@@ -16,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -61,6 +63,16 @@ public class BingxOpenOrdersClientImpl implements OpenOrdersClient {
         log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder (Bingx) | open order response: {} | action: {}",
                 Timestamp.from(Instant.now()), dto, "send order to API Bingx");
         return data;
+    }
+
+    @Override
+    public String getOpenOrdersParams(String secretKey, String time, String recvWindows) {
+        return "";
+    }
+
+    @Override
+    public List<OpenOrdersResponseDto> getOpenOrders(String encodedSecretKey, String encodedApiKey) {
+        return List.of();
     }
 
     private HttpHeaders addHttpHeaders(String apiName, String apiKey) {
