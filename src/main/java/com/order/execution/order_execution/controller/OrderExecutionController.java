@@ -42,7 +42,7 @@ public class OrderExecutionController {
     @PostMapping("/open-orders")
     public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestBody GetOpenOrdersRequestDto request){
         return ResponseEntity.ok(executeOrderServiceMap.get(request.getExchange())
-                .handleOrderRequest(request.getEncodedSecretKey(), request.getEncodedApiKey()));
+                .handleOrderRequest(request.getEncodedApiKey(), request.getEncodedSecretKey()));
     }
 
 }

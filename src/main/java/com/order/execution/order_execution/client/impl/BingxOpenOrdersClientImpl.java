@@ -66,7 +66,7 @@ public class BingxOpenOrdersClientImpl implements OpenOrdersClient {
     }
 
     @Override
-    public String getOpenOrdersParams(String secretKey, String time, String recvWindows) {
+    public String getOpenOrdersParams(String secretKey, String time) {
         return "";
     }
 

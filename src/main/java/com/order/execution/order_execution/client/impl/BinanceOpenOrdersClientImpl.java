@@ -56,10 +56,9 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
     @SneakyThrows
     public List<OpenOrdersResponseDto> getOpenOrders(String encodedSecretKey, String encodedApiKey){
         String time = "" + new Timestamp(System.currentTimeMillis()).getTime();
-        String recvWindows = "15000";
         String secretKey = encryptDecryptGenerator.decryptData(encodedSecretKey);
         String apiKey = encryptDecryptGenerator.decryptData(encodedApiKey);
-        String params = this.getOpenOrdersParams(secretKey, time, recvWindows);
+        String params = this.getOpenOrdersParams(secretKey, time);
         String requestUrl = this.getRequestUrl(OPEN_ORDERS_URL, params);
         HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, apiKey);
         String openOrdersResponse = restTemplate.exchange(
@@ -94,10 +93,9 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
     }
 
     @Override
-    public String getOpenOrdersParams(String secretKey, String time, String recvWindow) {
+    public String getOpenOrdersParams(String secretKey, String time) {
         TreeMap<String, String> parameters = new TreeMap<>();
         parameters.put(TIMESTAMP, time);
-        parameters.put(RECV_WINDOW, recvWindow);
         String valueToDigest = this.getMessageToDigest(parameters);
         String signature = SignatureGenerator.generateSignature(secretKey, valueToDigest);
         return valueToDigest + "&signature=" + signature;

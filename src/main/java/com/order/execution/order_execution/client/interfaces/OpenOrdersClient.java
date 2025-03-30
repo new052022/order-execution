@@ -10,7 +10,7 @@ public interface OpenOrdersClient {
 
     OrderResponseDto createPerpetualOrder(CreateOrderRequestDto dto);
 
-    String getOpenOrdersParams(String secretKey, String time, String recvWindows);
+    String getOpenOrdersParams(String secretKey, String time);
 
     List<OpenOrdersResponseDto> getOpenOrders(String encodedSecretKey, String encodedApiKey);
 
