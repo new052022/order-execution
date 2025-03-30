@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
+import com.order.execution.order_execution.dto.OpenPositionResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.util.EncryptDecryptGenerator;
 import com.order.execution.order_execution.util.binance.QueryParamsGenerator;
@@ -34,6 +35,8 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     private final static String PERPETUAL_MARKET_ORDER_URL = "https://fapi.binance.com/fapi/v1";
 
+    private final static String GENERAL_BINANCE_API = "https://fapi.binance.com";
+
     public static final String ORDER = "/order";
 
     public static final String DELIMETER = "?";
@@ -46,11 +49,32 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     private static final String OPEN_ORDERS_URL = "/openOrders";
 
+    private static final String OPEN_POSITIONS_URL = "/fapi/v3/positionRisk";
+
     private final ObjectMapper objectMapper;
 
     private final EncryptDecryptGenerator encryptDecryptGenerator;
 
     private final QueryParamsGenerator queryParamsGenerator;
+
+    @Override
+    @SneakyThrows
+    public List<OpenPositionResponseDto> getOpenPositions(String encodedSecretKey, String encodedApiKey){
+        String time = "" + new Timestamp(System.currentTimeMillis()).getTime();
+        String secretKey = encryptDecryptGenerator.decryptData(encodedSecretKey);
+        String apiKey = encryptDecryptGenerator.decryptData(encodedApiKey);
+        String params = this.getOpenOrdersParams(secretKey, time);
+        String requestUrl = this.getRequestUrl(OPEN_POSITIONS_URL, params);
+        HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, apiKey);
+        String openOrdersResponse = restTemplate.exchange(
+                requestUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
+        List<OpenPositionResponseDto> ordersList = objectMapper.readValue(openOrdersResponse,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, OpenOrdersResponseDto.class));
+        log.info("[TRADING BOT] Time: {} | Order-service | getOpenPositions" +
+                        " | number of open positions : {} | action: {}",
+                Timestamp.from(Instant.now()), ordersList.size(), "fetch open positions");
+        return ordersList;
+    }
 
     @Override
     @SneakyThrows
@@ -102,8 +126,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
     }
 
     private String getRequestUrl(String openOrdersUrl, String params) {
-        String urlStr = PERPETUAL_MARKET_ORDER_URL + openOrdersUrl + "?" + params;
-        return urlStr;
+        return GENERAL_BINANCE_API + openOrdersUrl + "?" + params;
     }
 
     private String getMessageToDigest(TreeMap<String, String> parameters) {

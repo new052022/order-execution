@@ -3,6 +3,7 @@ package com.order.execution.order_execution.client.impl;
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
+import com.order.execution.order_execution.dto.OpenPositionResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.util.EncryptDecryptGenerator;
 import com.order.execution.order_execution.util.binance.QueryParamsGenerator;
@@ -72,6 +73,11 @@ public class BingxOpenOrdersClientImpl implements OpenOrdersClient {
 
     @Override
     public List<OpenOrdersResponseDto> getOpenOrders(String encodedSecretKey, String encodedApiKey) {
+        return List.of();
+    }
+
+    @Override
+    public List<OpenPositionResponseDto> getOpenPositions(String encodedSecretKey, String encodedApiKey) {
         return List.of();
     }
 

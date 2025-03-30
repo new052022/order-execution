@@ -3,6 +3,7 @@ package com.order.execution.order_execution.service.impl;
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
+import com.order.execution.order_execution.dto.OpenPositionResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.mapper.OrderMapper;
 import com.order.execution.order_execution.model.Order;
@@ -39,6 +40,11 @@ public class BingxExecuteOrderServiceImpl implements ExecuteOrderService {
 
     @Override
     public List<OpenOrdersResponseDto> handleOrderRequest(String encodedApiKey, String encodedSecretKey) {
+        return List.of();
+    }
+
+    @Override
+    public List<OpenPositionResponseDto> handlePositionRequest(String encodedApiKey, String encodedSecretKey) {
         return List.of();
     }
 

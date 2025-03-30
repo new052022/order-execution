@@ -3,6 +3,7 @@ package com.order.execution.order_execution.controller;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.GetOpenOrdersRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
+import com.order.execution.order_execution.dto.OpenPositionResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.service.interfaces.ExecuteOrderService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +42,12 @@ public class OrderExecutionController {
     public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestBody GetOpenOrdersRequestDto request){
         return ResponseEntity.ok(executeOrderServiceMap.get(request.getExchange())
                 .handleOrderRequest(request.getEncodedApiKey(), request.getEncodedSecretKey()));
+    }
+
+    @PostMapping("/open-positions")
+    public ResponseEntity<List<OpenPositionResponseDto>> getOpenPositions(@RequestBody GetOpenOrdersRequestDto request){
+        return ResponseEntity.ok(executeOrderServiceMap.get(request.getExchange())
+                .handlePositionRequest(request.getEncodedApiKey(), request.getEncodedSecretKey()));
     }
 
 }
