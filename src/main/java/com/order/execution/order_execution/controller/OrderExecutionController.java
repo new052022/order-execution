@@ -38,7 +38,6 @@ public class OrderExecutionController {
         return ResponseEntity.ok(executeOrderServiceMap.get(dto.getExchange()).handleOrderRequest(dto));
     }
 
-
     @GetMapping("/open-orders")
     public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestParam String encodedApiKey,
                                                                      @RequestParam String encodedSecretKey,
