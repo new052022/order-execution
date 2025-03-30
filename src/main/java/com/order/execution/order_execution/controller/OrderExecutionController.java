@@ -1,6 +1,7 @@
 package com.order.execution.order_execution.controller;
 
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
+import com.order.execution.order_execution.dto.GetOpenOrdersRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
 import com.order.execution.order_execution.service.interfaces.ExecuteOrderService;
@@ -38,11 +39,10 @@ public class OrderExecutionController {
         return ResponseEntity.ok(executeOrderServiceMap.get(dto.getExchange()).handleOrderRequest(dto));
     }
 
-    @GetMapping("/open-orders")
-    public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestParam String encodedApiKey,
-                                                                     @RequestParam String encodedSecretKey,
-                                                                     @RequestParam String exchange) {
-        return ResponseEntity.ok(executeOrderServiceMap.get(exchange).handleOrderRequest(encodedSecretKey, encodedApiKey));
+    @PostMapping("/open-orders")
+    public ResponseEntity<List<OpenOrdersResponseDto>> getOpenOrders(@RequestBody GetOpenOrdersRequestDto request){
+        return ResponseEntity.ok(executeOrderServiceMap.get(request.getExchange())
+                .handleOrderRequest(request.getEncodedSecretKey(), request.getEncodedApiKey()));
     }
 
 }
