@@ -72,7 +72,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         String openOrdersResponse = restTemplate.exchange(
                 requestUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
         List<AccountBalanceDto> ordersList = objectMapper.readValue(openOrdersResponse,
-                objectMapper.getTypeFactory().constructCollectionType(List.class, OpenOrdersResponseDto.class));
+                objectMapper.getTypeFactory().constructCollectionType(List.class, AccountBalanceDto.class));
         log.info("[TRADING BOT] Time: {} | Order-service | getBalances" +
                         " | number of assets in balance : {} | action: {}",
                 Timestamp.from(Instant.now()), ordersList.size(), "fetch account balances");
@@ -91,7 +91,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         String openOrdersResponse = restTemplate.exchange(
                 requestUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
         List<OpenPositionResponseDto> ordersList = objectMapper.readValue(openOrdersResponse,
-                objectMapper.getTypeFactory().constructCollectionType(List.class, OpenOrdersResponseDto.class));
+                objectMapper.getTypeFactory().constructCollectionType(List.class, OpenPositionResponseDto.class));
         log.info("[TRADING BOT] Time: {} | Order-service | getOpenPositions" +
                         " | number of open positions : {} | action: {}",
                 Timestamp.from(Instant.now()), ordersList.size(), "fetch open positions");
