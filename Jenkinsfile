@@ -73,7 +73,9 @@ pipeline {
                         docker ps -a -f name=order-execution -q | xargs --no-run-if-empty docker rm -f || true
 
                         echo "Deploying new container..."
-                        docker run -d --name order-execution -p 9002:9002 \
+                        docker run -d --name order-execution \
+                            --network moritz-network \
+                            -p 9002:9002 \
                             -e POSTGRES_USER="$POSTGRES_USER" \
                             -e POSTGRES_PASS="$POSTGRES_PASS" \
                             -e DB_HOST="$DB_HOST" \
