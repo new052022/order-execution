@@ -75,4 +75,6 @@ public class CreateOrderRequestDto {
 
     private String exchange;
 
+    private String newClientOrderId;
+
 }
