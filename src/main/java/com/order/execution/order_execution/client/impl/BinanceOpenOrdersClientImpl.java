@@ -5,6 +5,7 @@ import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.AccountBalanceDto;
 import com.order.execution.order_execution.dto.CloseOrdersRequestDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
+import com.order.execution.order_execution.dto.DeleteOrderDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OpenPositionResponseDto;
 import com.order.execution.order_execution.dto.OrderResponseDto;
@@ -41,7 +42,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     private final static String BALANCE = "/fapi/v2/balance";
 
-    private final static String DELETE_ORDERS = "/fapi/v1/batchOrders";
+    private final static String DELETE_ORDERS = "/fapi/v1/order";
 
     public static final String ORDER = "/order";
 
@@ -143,24 +144,31 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     @SneakyThrows
     public String deleteOrders(CloseOrdersRequestDto request) {
-        request.setTimestamp("" + new Timestamp(System.currentTimeMillis()).getTime());
-        String privateKey = encryptDecryptGenerator.decryptData(request.getPrivateKey());
-        String params = queryParamsGenerator.generatePerpetualParams(request);
-        String signature = SignatureGenerator.generateSignature(privateKey, params);
-        HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(request.getApiKey()));
-        HttpEntity<Object> entity = new HttpEntity<>(headers);
-        String order = null;
-        String url = GENERAL_BINANCE_API + DELETE_ORDERS + DELIMETER + params + SIGNATURE + signature;
-        log.info("url for orders canceling: {}", url);
-        try {
-            order = restTemplate.exchange(
-                    url, HttpMethod.DELETE, entity, String.class).getBody();
-        } catch (Exception e) {
-            log.info("[TRADING BOT] Time: {} | Order-execution-service | deleteOrders (Binance) | Failed order response: {}",
-                    Timestamp.from(Instant.now()), e.getMessage());
-        }
-        log.info("orders were deleted: {}", order);
-        return order;
+        StringBuilder builder = new StringBuilder();
+        request.getOrigClientOrderIdList().forEach(clientOrder -> {
+            request.setTimestamp("" + new Timestamp(System.currentTimeMillis()).getTime());
+            String privateKey = encryptDecryptGenerator.decryptData(request.getPrivateKey());
+            String params = queryParamsGenerator.generateDeleteParams(DeleteOrderDto.builder()
+                    .origClientOrderId(clientOrder)
+                    .timestamp(request.getTimestamp())
+                    .build());
+            String signature = SignatureGenerator.generateSignature(privateKey, params);
+            HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(request.getApiKey()));
+            HttpEntity<Object> entity = new HttpEntity<>(headers);
+            String order = null;
+            String url = GENERAL_BINANCE_API + DELETE_ORDERS + DELIMETER + params + SIGNATURE + signature;
+            log.info("url for orders canceling: {}", url);
+            try {
+                order = restTemplate.exchange(
+                        url, HttpMethod.DELETE, entity, String.class).getBody();
+            } catch (Exception e) {
+                log.info("[TRADING BOT] Time: {} | Order-execution-service | deleteOrders (Binance) | Failed order response: {}",
+                        Timestamp.from(Instant.now()), e.getMessage());
+            }
+            log.info("orders were deleted: {}", order);
+            builder.append(order);
+        });
+        return builder.toString();
     }
 
     @Override
