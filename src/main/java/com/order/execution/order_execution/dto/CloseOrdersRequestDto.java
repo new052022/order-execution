@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -21,7 +22,7 @@ public class CloseOrdersRequestDto {
 
     private String privateKey;
 
-    private List<String> origClientOrderIdList;
+    private List<SymbolOrderDto> origClientOrderIdList;
 
     private String timestamp;
 

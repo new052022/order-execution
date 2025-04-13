@@ -11,12 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DeleteOrderDto {
-
-    private String origClientOrderId;
-
-    private String timestamp;
+public class SymbolOrderDto {
 
     private String symbol;
+
+    private String orderId;
 
 }
