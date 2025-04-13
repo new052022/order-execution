@@ -46,7 +46,7 @@ public class QueryParamsGenerator {
         StringBuilder params = new StringBuilder();
         try {
 
-            Field[] fields = CreateOrderRequestDto.class.getDeclaredFields();
+            Field[] fields = DeleteOrderDto.class.getDeclaredFields();
             Arrays.sort(fields, Comparator.comparing(Field::getName));
             for (Field field : fields) {
                 field.setAccessible(true);
