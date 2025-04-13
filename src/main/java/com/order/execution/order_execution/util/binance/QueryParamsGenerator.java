@@ -8,6 +8,8 @@ import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -70,7 +72,9 @@ public class QueryParamsGenerator {
                             if (!orderIds.isEmpty()) {
                                 // Сериализуем список в JSON-формат
                                 String jsonOrderIds = objectMapper.writeValueAsString(orderIds);
-                                params.append(fieldName).append("=").append(jsonOrderIds);
+                                // Кодируем JSON-строку в URL-совместимый формат
+                                String encodedOrderIds = URLEncoder.encode(jsonOrderIds, StandardCharsets.UTF_8);
+                                params.append(fieldName).append("=").append(encodedOrderIds);
                             }
                         } else {
                             // Обычная обработка для других полей

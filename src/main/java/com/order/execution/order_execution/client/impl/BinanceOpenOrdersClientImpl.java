@@ -146,7 +146,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         request.setTimestamp("" + new Timestamp(System.currentTimeMillis()).getTime());
         String privateKey = encryptDecryptGenerator.decryptData(request.getPrivateKey());
         String params = queryParamsGenerator.generatePerpetualParams(request);
-        String signature = SignatureGenerator.generateSignatureForArray(params, privateKey);
+        String signature = SignatureGenerator.generateSignature(privateKey, params);
         HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(request.getApiKey()));
         HttpEntity<Object> entity = new HttpEntity<>(headers);
         String order = null;
