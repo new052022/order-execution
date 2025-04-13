@@ -27,7 +27,7 @@ public class QueryParamsGenerator {
                 field.setAccessible(true);
                 String fieldName = field.getName();
                 if (!fieldName.equals("userId") && !fieldName.equals("exchange") && !fieldName.equals("apiKey") && !fieldName.equals("privateKey")) {
-                   String fieldValue = (String) field.get(dto);
+                    String fieldValue = (String) field.get(dto);
                     if (fieldValue != null && !fieldValue.isEmpty()) {
                         if (!params.isEmpty()) {
                             params.append("&");
@@ -73,8 +73,8 @@ public class QueryParamsGenerator {
                                 // 1. Сериализуем список в JSON
                                 String jsonOrderIds = objectMapper.writeValueAsString(orderIds);
 
-                                // 2. Заменяем только кавычки на %22
-                                jsonOrderIds = jsonOrderIds.replace("\"", "%22");
+                                // 2. Убираем все кавычки
+                                jsonOrderIds = jsonOrderIds.replace("\"", "");
 
                                 // Добавляем параметр в строку запроса
                                 params.append(fieldName).append("=").append(jsonOrderIds);
