@@ -149,7 +149,8 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(request.getApiKey()));
         HttpEntity<Object> entity = new HttpEntity<>(headers);
         String order = null;
-        log.info("Params for orders canceling: {}", params);
+        String url = GENERAL_BINANCE_API + DELETE_ORDERS + DELIMETER + params + SIGNATURE + signature;
+        log.info("url for orders canceling: {}", url);
         try {
             order = restTemplate.exchange(
                     GENERAL_BINANCE_API + DELETE_ORDERS + DELIMETER + params + SIGNATURE + signature,

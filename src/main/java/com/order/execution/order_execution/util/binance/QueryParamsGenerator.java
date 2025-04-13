@@ -69,7 +69,7 @@ public class QueryParamsGenerator {
                             List<String> orderIds = (List<String>) fieldValue;
                             if (!orderIds.isEmpty()) {
                                 // Сериализуем список в JSON-формат
-                                String jsonOrderIds = new ObjectMapper().writeValueAsString(orderIds);
+                                String jsonOrderIds = objectMapper.writeValueAsString(orderIds);
                                 params.append(fieldName).append("=").append(jsonOrderIds);
                             }
                         } else {
