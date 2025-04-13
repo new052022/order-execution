@@ -3,6 +3,7 @@ package com.order.execution.order_execution.client.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.AccountBalanceDto;
+import com.order.execution.order_execution.dto.CloseOrdersRequestDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OpenPositionResponseDto;
@@ -40,6 +41,8 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     private final static String BALANCE = "/fapi/v2/balance";
 
+    private final static String DELETE_ORDERS = "/fapi/v1/batchOrders";
+
     public static final String ORDER = "/order";
 
     public static final String DELIMETER = "?";
@@ -62,7 +65,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     @Override
     @SneakyThrows
-    public List<AccountBalanceDto> getBalances(String encodedSecretKey, String encodedApiKey){
+    public List<AccountBalanceDto> getBalances(String encodedSecretKey, String encodedApiKey) {
         String time = "" + new Timestamp(System.currentTimeMillis()).getTime();
         String secretKey = encryptDecryptGenerator.decryptData(encodedSecretKey);
         String apiKey = encryptDecryptGenerator.decryptData(encodedApiKey);
@@ -81,7 +84,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     @Override
     @SneakyThrows
-    public List<OpenPositionResponseDto> getOpenPositions(String encodedSecretKey, String encodedApiKey){
+    public List<OpenPositionResponseDto> getOpenPositions(String encodedSecretKey, String encodedApiKey) {
         String time = "" + new Timestamp(System.currentTimeMillis()).getTime();
         String secretKey = encryptDecryptGenerator.decryptData(encodedSecretKey);
         String apiKey = encryptDecryptGenerator.decryptData(encodedApiKey);
@@ -100,7 +103,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     @Override
     @SneakyThrows
-    public List<OpenOrdersResponseDto> getOpenOrders(String encodedSecretKey, String encodedApiKey){
+    public List<OpenOrdersResponseDto> getOpenOrders(String encodedSecretKey, String encodedApiKey) {
         String time = "" + new Timestamp(System.currentTimeMillis()).getTime();
         String secretKey = encryptDecryptGenerator.decryptData(encodedSecretKey);
         String apiKey = encryptDecryptGenerator.decryptData(encodedApiKey);
@@ -135,6 +138,28 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         }
         log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder (Binance) | open order response: {} | action: {}",
                 Timestamp.from(Instant.now()), dto, "send order to API Binance");
+        return order;
+    }
+
+    public String deleteOrders(CloseOrdersRequestDto request) {
+        request.setTimestamp("" + new Timestamp(System.currentTimeMillis()).getTime());
+        String privateKey = encryptDecryptGenerator.decryptData(request.getPrivateKey());
+        String params = queryParamsGenerator.generatePerpetualParams(request);
+        String signature = SignatureGenerator.generateSignature(privateKey, params);
+        HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(request.getApiKey()));
+        HttpEntity<Object> entity = new HttpEntity<>(headers);
+        String order = null;
+        log.info("Params for orders canceling: {}", params);
+        try {
+            order = restTemplate.exchange(
+                    GENERAL_BINANCE_API + DELETE_ORDERS + DELIMETER + params + SIGNATURE + signature,
+                    HttpMethod.DELETE, entity,
+                    String.class).getBody();
+        } catch (Exception e) {
+            log.info("[TRADING BOT] Time: {} | Order-execution-service | deleteOrders (Binance) | Failed order response: {}",
+                    Timestamp.from(Instant.now()), e.getMessage());
+        }
+        log.info("orders were deleted: {}", order);
         return order;
     }
 

@@ -1,11 +1,16 @@
 package com.order.execution.order_execution.util.binance;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.order.execution.order_execution.dto.CloseOrdersRequestDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
+import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 @Component
 public class QueryParamsGenerator {
@@ -30,6 +35,51 @@ public class QueryParamsGenerator {
                 }
             }
         } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+
+        return params.toString();
+    }
+
+    @SneakyThrows
+    public String generatePerpetualParams(CloseOrdersRequestDto dto) {
+        StringBuilder params = new StringBuilder();
+        ObjectMapper objectMapper = new ObjectMapper(); // Для сериализации списка в JSON
+
+        try {
+            Field[] fields = CloseOrdersRequestDto.class.getDeclaredFields();
+            Arrays.sort(fields, Comparator.comparing(Field::getName)); // Сортируем поля по имени
+            for (Field field : fields) {
+                field.setAccessible(true);
+                String fieldName = field.getName();
+
+                // Пропускаем ненужные поля
+                if (!fieldName.equals("userId") && !fieldName.equals("exchange") &&
+                        !fieldName.equals("apiKey") && !fieldName.equals("privateKey")) {
+
+                    Object fieldValue = field.get(dto); // Получаем значение поля
+
+                    if (fieldValue != null) {
+                        if (!params.isEmpty()) {
+                            params.append("&");
+                        }
+
+                        // Особая обработка для origClientOrderIdList
+                        if ("origClientOrderIdList".equals(fieldName)) {
+                            List<String> orderIds = (List<String>) fieldValue;
+                            if (!orderIds.isEmpty()) {
+                                // Сериализуем список в JSON-формат
+                                String jsonOrderIds = new ObjectMapper().writeValueAsString(orderIds);
+                                params.append(fieldName).append("=").append(jsonOrderIds);
+                            }
+                        } else {
+                            // Обычная обработка для других полей
+                            params.append(fieldName).append("=").append(fieldValue);
+                        }
+                    }
+                }
+            }
+        } catch (IllegalAccessException | JsonProcessingException e) {
             e.printStackTrace();
         }
 

@@ -2,6 +2,7 @@ package com.order.execution.order_execution.service.impl;
 
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.AccountBalanceDto;
+import com.order.execution.order_execution.dto.CloseOrdersRequestDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OpenPositionResponseDto;
@@ -53,6 +54,11 @@ public class BinanceExecuteOrderServiceImpl implements ExecuteOrderService {
     @Override
     public List<AccountBalanceDto> handleAccountBalancesRequest(String encodedApiKey, String encodedSecretKey) {
         return openOrdersClient.getBalances(encodedSecretKey, encodedApiKey);
+    }
+
+    @Override
+    public void deleteOrders(CloseOrdersRequestDto request) {
+        openOrdersClient.deleteOrders(request);
     }
 
     @Autowired

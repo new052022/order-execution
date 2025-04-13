@@ -2,6 +2,7 @@ package com.order.execution.order_execution.client.impl;
 
 import com.order.execution.order_execution.client.interfaces.OpenOrdersClient;
 import com.order.execution.order_execution.dto.AccountBalanceDto;
+import com.order.execution.order_execution.dto.CloseOrdersRequestDto;
 import com.order.execution.order_execution.dto.CreateOrderRequestDto;
 import com.order.execution.order_execution.dto.OpenOrdersResponseDto;
 import com.order.execution.order_execution.dto.OpenPositionResponseDto;
@@ -85,6 +86,11 @@ public class BingxOpenOrdersClientImpl implements OpenOrdersClient {
     @Override
     public List<OpenPositionResponseDto> getOpenPositions(String encodedSecretKey, String encodedApiKey) {
         return List.of();
+    }
+
+    @Override
+    public String deleteOrders(CloseOrdersRequestDto request) {
+        return "";
     }
 
     private HttpHeaders addHttpHeaders(String apiName, String apiKey) {
