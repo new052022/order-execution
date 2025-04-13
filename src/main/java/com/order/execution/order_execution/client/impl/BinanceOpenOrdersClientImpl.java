@@ -141,11 +141,12 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         return order;
     }
 
+    @SneakyThrows
     public String deleteOrders(CloseOrdersRequestDto request) {
         request.setTimestamp("" + new Timestamp(System.currentTimeMillis()).getTime());
         String privateKey = encryptDecryptGenerator.decryptData(request.getPrivateKey());
         String params = queryParamsGenerator.generatePerpetualParams(request);
-        String signature = SignatureGenerator.generateSignature(privateKey, params);
+        String signature = SignatureGenerator.generateSignatureForArray(params, privateKey);
         HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(request.getApiKey()));
         HttpEntity<Object> entity = new HttpEntity<>(headers);
         String order = null;
