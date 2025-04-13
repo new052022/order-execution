@@ -73,14 +73,11 @@ public class QueryParamsGenerator {
                                 // 1. Сериализуем список в JSON
                                 String jsonOrderIds = objectMapper.writeValueAsString(orderIds);
 
-                                // 2. Удаляем пробелы из JSON-строки
-                                jsonOrderIds = jsonOrderIds.replace(" ", "");
-
-                                // 3. Кодируем JSON-строку в URL-совместимый формат
-                                String encodedOrderIds = URLEncoder.encode(jsonOrderIds, StandardCharsets.UTF_8.toString());
+                                // 2. Заменяем только кавычки на %22
+                                jsonOrderIds = jsonOrderIds.replace("\"", "%22");
 
                                 // Добавляем параметр в строку запроса
-                                params.append(fieldName).append("=").append(encodedOrderIds);
+                                params.append(fieldName).append("=").append(jsonOrderIds);
                             }
                         } else {
                             // Обычная обработка для других полей
