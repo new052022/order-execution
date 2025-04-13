@@ -70,10 +70,16 @@ public class QueryParamsGenerator {
                         if ("origClientOrderIdList".equals(fieldName)) {
                             List<String> orderIds = (List<String>) fieldValue;
                             if (!orderIds.isEmpty()) {
-                                // Сериализуем список в JSON-формат
+                                // 1. Сериализуем список в JSON
                                 String jsonOrderIds = objectMapper.writeValueAsString(orderIds);
-                                // Кодируем JSON-строку в URL-совместимый формат
-                                String encodedOrderIds = URLEncoder.encode(jsonOrderIds, StandardCharsets.UTF_8);
+
+                                // 2. Удаляем пробелы из JSON-строки
+                                jsonOrderIds = jsonOrderIds.replace(" ", "");
+
+                                // 3. Кодируем JSON-строку в URL-совместимый формат
+                                String encodedOrderIds = URLEncoder.encode(jsonOrderIds, StandardCharsets.UTF_8.toString());
+
+                                // Добавляем параметр в строку запроса
                                 params.append(fieldName).append("=").append(encodedOrderIds);
                             }
                         } else {
