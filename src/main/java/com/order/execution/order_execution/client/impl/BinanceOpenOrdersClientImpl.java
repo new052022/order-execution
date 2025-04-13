@@ -153,9 +153,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         log.info("url for orders canceling: {}", url);
         try {
             order = restTemplate.exchange(
-                    GENERAL_BINANCE_API + DELETE_ORDERS + DELIMETER + params + SIGNATURE + signature,
-                    HttpMethod.DELETE, entity,
-                    String.class).getBody();
+                    url, HttpMethod.DELETE, entity, String.class).getBody();
         } catch (Exception e) {
             log.info("[TRADING BOT] Time: {} | Order-execution-service | deleteOrders (Binance) | Failed order response: {}",
                     Timestamp.from(Instant.now()), e.getMessage());
