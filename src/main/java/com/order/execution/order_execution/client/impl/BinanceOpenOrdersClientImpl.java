@@ -58,6 +58,8 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     private static final String OPEN_POSITIONS_URL = "/fapi/v3/positionRisk";
 
+    private static final String TICKER_PRICE_URL = "/fapi/v2/ticker/price";
+
     private final ObjectMapper objectMapper;
 
     private final EncryptDecryptGenerator encryptDecryptGenerator;
@@ -156,6 +158,27 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
             double originalQuantity = Double.parseDouble(originalDto.getQuantity());
             double partialQuantity = originalQuantity * originalDto.getPartialClosePercent();
 
+            // Получаем текущую рыночную цену
+            String symbol = originalDto.getSymbol();
+            double currentPrice = getCurrentMarketPrice(symbol);
+
+            // Определяем безопасную цену для TP с учетом направления позиции
+            double safeTpPrice;
+            if (originalDto.getSide().equals("BUY")) {
+                // Для LONG позиции: TP должен быть выше текущей цены
+                // Берем максимум между заданной ценой и текущей ценой + 0.5%
+                safeTpPrice = Math.max(originalDto.getPartialClosePrice(), currentPrice * 1.005);
+            } else {
+                // Для SHORT позиции: TP должен быть ниже текущей цены
+                // Берем минимум между заданной ценой и текущей ценой - 0.5%
+                safeTpPrice = Math.min(originalDto.getPartialClosePrice(), currentPrice * 0.995);
+            }
+
+            log.info("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
+                    "TP Price Calculation | Symbol: {} | Side: {} | Current Price: {} | Requested TP: {} | Safe TP: {}",
+                    Timestamp.from(Instant.now()), symbol, originalDto.getSide(), currentPrice,
+                    originalDto.getPartialClosePrice(), safeTpPrice);
+
             // Создаем DTO для TP ордера
             CreateOrderRequestDto tpDto = CreateOrderRequestDto.builder()
                     .symbol(originalDto.getSymbol())
@@ -163,7 +186,7 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
                     .positionSide(originalDto.getPositionSide())
                     .type("TAKE_PROFIT_MARKET") // Используем TAKE_PROFIT_MARKET для автоматического исполнения
                     .quantity(String.format("%.8f", partialQuantity)) // Форматируем количество
-                    .stopPrice(String.format("%.8f", originalDto.getPartialClosePrice())) // Цена срабатывания
+                    .stopPrice(String.format("%.8f", safeTpPrice)) // Используем безопасную цену
                     .workingType("MARK_PRICE") // Используем mark price для избежания манипуляций
                     .reduceOnly("true") // Только для закрытия позиции
                     .apiKey(originalDto.getApiKey())
@@ -183,9 +206,9 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
                     HttpMethod.POST, entity, OrderResponseDto.class).getBody();
 
             log.info("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
-                    "Partial TP order created | Price: {} | Quantity: {} | Percent: {}% | Reason: {} | Mode: {}",
+                    "Partial TP order created | Safe TP Price: {} | Quantity: {} | Percent: {}% | Reason: {} | Mode: {}",
                     Timestamp.from(Instant.now()),
-                    originalDto.getPartialClosePrice(),
+                    safeTpPrice,
                     String.format("%.8f", partialQuantity),
                     originalDto.getPartialClosePercent() * 100,
                     originalDto.getPartialCloseReason(),
@@ -195,6 +218,21 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
             log.error("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
                     "Failed to create partial TP order: {} | Reason: {}",
                     Timestamp.from(Instant.now()), e.getMessage(), originalDto.getPartialCloseReason());
+        }
+    }
+
+    // Метод для получения текущей рыночной цены по символу
+    private double getCurrentMarketPrice(String symbol) {
+        try {
+            String requestUrl = GENERAL_BINANCE_API + TICKER_PRICE_URL + "?symbol=" + symbol;
+            String response = restTemplate.exchange(requestUrl, HttpMethod.GET, null, String.class).getBody();
+            Map<String, Object> responseMap = objectMapper.readValue(response, Map.class);
+            return Double.parseDouble(responseMap.get("price").toString());
+        } catch (Exception e) {
+            log.error("[TRADING BOT] Time: {} | Order-execution-service | getCurrentMarketPrice (Binance) | " +
+                    "Failed to fetch current market price: {} | Symbol: {}",
+                    Timestamp.from(Instant.now()), e.getMessage(), symbol);
+            return 0;
         }
     }
 
