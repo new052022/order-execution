@@ -133,6 +133,11 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
             order = restTemplate.exchange(
                     PERPETUAL_MARKET_ORDER_URL + ORDER + DELIMETER + params + SIGNATURE + signature, HttpMethod.POST, entity,
                     OrderResponseDto.class).getBody();
+
+            // Создаем частичный Take Profit ордер, если флаг установлен
+            if (order != null && dto.getShouldPartialClose() != null && dto.getShouldPartialClose()) {
+                createPartialTakeProfitOrder(dto);
+            }
         } catch (Exception e) {
             log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder (Binance) | Failed order response: {}",
                     Timestamp.from(Instant.now()), e.getMessage());
@@ -140,6 +145,57 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         log.info("[TRADING BOT] Time: {} | Order-execution-service | createPerpetualOrder (Binance) | open order response: {} | action: {}",
                 Timestamp.from(Instant.now()), dto, "send order to API Binance");
         return order;
+    }
+
+    /**
+     * Создает ордер для частичного закрытия позиции (Take Profit)
+     */
+    private void createPartialTakeProfitOrder(CreateOrderRequestDto originalDto) {
+        try {
+            // Вычисляем количество для частичного закрытия
+            double originalQuantity = Double.parseDouble(originalDto.getQuantity());
+            double partialQuantity = originalQuantity * originalDto.getPartialClosePercent();
+
+            // Создаем DTO для TP ордера
+            CreateOrderRequestDto tpDto = CreateOrderRequestDto.builder()
+                    .symbol(originalDto.getSymbol())
+                    .side(originalDto.getSide().equals("BUY") ? "SELL" : "BUY") // Противоположная сторона
+                    .positionSide(originalDto.getPositionSide())
+                    .type("TAKE_PROFIT_MARKET") // Используем TAKE_PROFIT_MARKET для автоматического исполнения
+                    .quantity(String.format("%.8f", partialQuantity)) // Форматируем количество
+                    .stopPrice(String.format("%.8f", originalDto.getPartialClosePrice())) // Цена срабатывания
+                    .workingType("MARK_PRICE") // Используем mark price для избежания манипуляций
+                    .reduceOnly("true") // Только для закрытия позиции
+                    .apiKey(originalDto.getApiKey())
+                    .privateKey(originalDto.getPrivateKey())
+                    .timestamp("" + new Timestamp(System.currentTimeMillis()).getTime())
+                    .build();
+
+            // Отправляем TP ордер
+            String params = queryParamsGenerator.generatePerpetualParams(tpDto);
+            String privateKey = encryptDecryptGenerator.decryptData(tpDto.getPrivateKey());
+            String signature = SignatureGenerator.generateSignature(privateKey, params);
+            HttpHeaders headers = this.addHttpHeaders(API_KEY_NAME, encryptDecryptGenerator.decryptData(tpDto.getApiKey()));
+            HttpEntity<Object> entity = new HttpEntity<>(headers);
+
+            OrderResponseDto tpOrder = restTemplate.exchange(
+                    PERPETUAL_MARKET_ORDER_URL + ORDER + DELIMETER + params + SIGNATURE + signature,
+                    HttpMethod.POST, entity, OrderResponseDto.class).getBody();
+
+            log.info("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
+                    "Partial TP order created | Price: {} | Quantity: {} | Percent: {}% | Reason: {} | Mode: {}",
+                    Timestamp.from(Instant.now()),
+                    originalDto.getPartialClosePrice(),
+                    String.format("%.8f", partialQuantity),
+                    originalDto.getPartialClosePercent() * 100,
+                    originalDto.getPartialCloseReason(),
+                    originalDto.getTrailingMode());
+
+        } catch (Exception e) {
+            log.error("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
+                    "Failed to create partial TP order: {} | Reason: {}",
+                    Timestamp.from(Instant.now()), e.getMessage(), originalDto.getPartialCloseReason());
+        }
     }
 
     @SneakyThrows

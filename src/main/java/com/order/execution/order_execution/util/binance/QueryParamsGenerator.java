@@ -25,9 +25,19 @@ public class QueryParamsGenerator {
             for (Field field : fields) {
                 field.setAccessible(true);
                 String fieldName = field.getName();
-                if (!fieldName.equals("userId") && !fieldName.equals("exchange") && !fieldName.equals("apiKey") && !fieldName.equals("privateKey")) {
-                    String fieldValue = (String) field.get(dto);
-                    if (fieldValue != null && !fieldValue.isEmpty()) {
+                // Exclude internal fields and partial take profit fields from Binance API request
+                if (!fieldName.equals("userId")
+                        && !fieldName.equals("exchange")
+                        && !fieldName.equals("apiKey")
+                        && !fieldName.equals("privateKey")
+                        && !fieldName.equals("shouldPartialClose")
+                        && !fieldName.equals("partialClosePrice")
+                        && !fieldName.equals("partialClosePercent")
+                        && !fieldName.equals("partialCloseReason")
+                        && !fieldName.equals("trailingMode")) {
+
+                    Object fieldValue = field.get(dto);
+                    if (fieldValue != null && !fieldValue.toString().isEmpty()) {
                         if (!params.isEmpty()) {
                             params.append("&");
                         }

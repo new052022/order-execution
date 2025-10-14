@@ -77,4 +77,35 @@ public class CreateOrderRequestDto {
 
     private String newClientOrderId;
 
+    // ==================== PARTIAL TAKE PROFIT FIELDS ====================
+
+    /**
+     * Флаг, указывающий нужно ли частичное закрытие позиции
+     */
+    private Boolean shouldPartialClose;
+
+    /**
+     * Цена, по которой нужно закрыть часть позиции
+     * Например: если цена достигла TP1, здесь будет цена TP1
+     */
+    private Double partialClosePrice;
+
+    /**
+     * Процент позиции для закрытия (0.0 - 1.0)
+     * Например: 0.25 = закрыть 25% позиции
+     */
+    private Double partialClosePercent;
+
+    /**
+     * Описание причины частичного закрытия для логирования
+     * Например: "TP1 hit at +15% (4 ATR)"
+     */
+    private String partialCloseReason;
+
+    /**
+     * Режим trailing stop для информации
+     * Например: "ROCKET_MODE", "ELASTIC_LOCK"
+     */
+    private String trailingMode;
+
 }
