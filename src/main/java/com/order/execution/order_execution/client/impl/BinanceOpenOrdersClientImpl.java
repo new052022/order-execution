@@ -170,7 +170,12 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
                 return dto;
             }
 
-            double requestedStopPrice = Double.parseDouble(dto.getStopPrice());
+            String originalStopPriceStr = dto.getStopPrice();
+            double requestedStopPrice = Double.parseDouble(originalStopPriceStr);
+
+            // Определяем количество знаков после запятой из оригинальной цены
+            int decimalPlaces = getDecimalPlaces(originalStopPriceStr);
+
             double minPriceOffset = 0.01; // 1% минимальный отступ
             double adjustedStopPrice = requestedStopPrice;
             boolean wasAdjusted = false;
@@ -219,12 +224,14 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
             }
 
             if (wasAdjusted) {
-                dto.setStopPrice(String.format("%.8f", adjustedStopPrice));
+                // Форматируем с тем же количеством знаков после запятой, что и оригинальная цена
+                String formattedPrice = String.format("%." + decimalPlaces + "f", adjustedStopPrice);
+                dto.setStopPrice(formattedPrice);
                 log.warn("[TRADING BOT] Time: {} | Order-execution-service | adjustStopPriceIfNeeded (Binance) | " +
                         "StopPrice adjusted | Symbol: {} | Type: {} | Side: {} | Current Price: {} | " +
-                        "Requested StopPrice: {} | Adjusted StopPrice: {} | Offset: {}%",
+                        "Requested StopPrice: {} | Adjusted StopPrice: {} | Decimal Places: {} | Offset: {}%",
                         Timestamp.from(Instant.now()), symbol, orderType, side, currentPrice,
-                        requestedStopPrice, adjustedStopPrice, minPriceOffset * 100);
+                        requestedStopPrice, formattedPrice, decimalPlaces, minPriceOffset * 100);
             } else {
                 log.info("[TRADING BOT] Time: {} | Order-execution-service | adjustStopPriceIfNeeded (Binance) | " +
                         "StopPrice is valid | Symbol: {} | Type: {} | Side: {} | Current Price: {} | StopPrice: {}",
@@ -238,6 +245,30 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         }
 
         return dto;
+    }
+
+    /**
+     * Определяет количество знаков после запятой в строковом представлении числа
+     */
+    private int getDecimalPlaces(String numberStr) {
+        if (numberStr == null || numberStr.isEmpty()) {
+            return 8; // По умолчанию 8 знаков
+        }
+
+        // Убираем лидирующие и завершающие пробелы
+        numberStr = numberStr.trim();
+
+        // Находим точку
+        int dotIndex = numberStr.indexOf('.');
+        if (dotIndex == -1) {
+            return 0; // Нет дробной части
+        }
+
+        // Убираем trailing zeros для точного определения
+        String decimalPart = numberStr.substring(dotIndex + 1);
+
+        // Возвращаем длину дробной части (включая trailing zeros, так как это важно для Binance)
+        return decimalPart.length();
     }
 
     /**
@@ -289,10 +320,17 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
                 }
             }
 
+            // Определяем точность цены на основе текущей рыночной цены
+            int decimalPlaces = getPriceDecimalPlaces(currentPrice);
+
+            // Определяем точность количества на основе оригинального количества
+            int quantityDecimalPlaces = getDecimalPlaces(originalDto.getQuantity());
+
             log.info("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
-                    "TP Price Calculation | Symbol: {} | Side: {} | Current Price: {} | Requested TP: {} | Safe TP: {} | Offset: {}%",
+                    "TP Price Calculation | Symbol: {} | Side: {} | Current Price: {} | Requested TP: {} | Safe TP: {} | " +
+                    "Price Decimals: {} | Quantity Decimals: {} | Offset: {}%",
                     Timestamp.from(Instant.now()), symbol, originalDto.getSide(), currentPrice,
-                    originalDto.getPartialClosePrice(), safeTpPrice, minPriceOffset * 100);
+                    originalDto.getPartialClosePrice(), safeTpPrice, decimalPlaces, quantityDecimalPlaces, minPriceOffset * 100);
 
             // Создаем DTO для TP ордера
             CreateOrderRequestDto tpDto = CreateOrderRequestDto.builder()
@@ -300,8 +338,8 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
                     .side(originalDto.getSide().equals("BUY") ? "SELL" : "BUY") // Противоположная сторона
                     .positionSide(originalDto.getPositionSide())
                     .type("TAKE_PROFIT_MARKET") // Используем TAKE_PROFIT_MARKET для автоматического исполнения
-                    .quantity(String.format("%.8f", partialQuantity)) // Форматируем количество
-                    .stopPrice(String.format("%.8f", safeTpPrice)) // Используем безопасную цену
+                    .quantity(String.format("%." + quantityDecimalPlaces + "f", partialQuantity)) // Форматируем с правильной точностью
+                    .stopPrice(String.format("%." + decimalPlaces + "f", safeTpPrice)) // Форматируем с правильной точностью
                     .workingType("MARK_PRICE") // Используем mark price для избежания манипуляций
                     .reduceOnly("true") // Только для закрытия позиции
                     .apiKey(originalDto.getApiKey())
@@ -323,8 +361,8 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
             log.info("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
                     "Partial TP order created | Safe TP Price: {} | Quantity: {} | Percent: {}% | Reason: {} | Mode: {}",
                     Timestamp.from(Instant.now()),
-                    safeTpPrice,
-                    String.format("%.8f", partialQuantity),
+                    String.format("%." + decimalPlaces + "f", safeTpPrice),
+                    String.format("%." + quantityDecimalPlaces + "f", partialQuantity),
                     originalDto.getPartialClosePercent() * 100,
                     originalDto.getPartialCloseReason(),
                     originalDto.getTrailingMode());
@@ -336,11 +374,36 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
         }
     }
 
-    // Метод для получения текущей рыночной цены по символу
+    /**
+     * Определяет количество знаков после запятой для цены на основе самой цены
+     * Более низкие цены требуют больше знаков после запятой
+     */
+    private int getPriceDecimalPlaces(double price) {
+        if (price >= 1000) {
+            return 2; // Для больших цен (например, BTC) - 2 знака
+        } else if (price >= 100) {
+            return 2; // 100-999: 2 знака
+        } else if (price >= 10) {
+            return 3; // 10-99: 3 знака
+        } else if (price >= 1) {
+            return 4; // 1-9: 4 знака
+        } else if (price >= 0.1) {
+            return 5; // 0.1-0.9: 5 знаков
+        } else if (price >= 0.01) {
+            return 6; // 0.01-0.09: 6 знаков
+        } else {
+            return 8; // Для очень маленьких цен - 8 знаков
+        }
+    }
+
+    /**
+     * Метод для получения текущей рыночной цены по символу
+     */
     private double getCurrentMarketPrice(String symbol) {
         try {
             String requestUrl = GENERAL_BINANCE_API + TICKER_PRICE_URL + "?symbol=" + symbol;
             String response = restTemplate.exchange(requestUrl, HttpMethod.GET, null, String.class).getBody();
+            @SuppressWarnings("unchecked")
             Map<String, Object> responseMap = objectMapper.readValue(response, Map.class);
             return Double.parseDouble(responseMap.get("price").toString());
         } catch (Exception e) {
