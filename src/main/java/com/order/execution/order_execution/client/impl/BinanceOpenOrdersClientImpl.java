@@ -184,39 +184,52 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
             String orderType = dto.getType();
             String side = dto.getSide();
 
-            // Для TAKE_PROFIT и STOP_MARKET ордеров
+            // Для TAKE_PROFIT ордеров автоматически устанавливаем reduceOnly=true
+            if (orderType != null && orderType.contains("TAKE_PROFIT")) {
+                if (dto.getReduceOnly() == null || dto.getReduceOnly().isEmpty()) {
+                    dto.setReduceOnly("true");
+                    log.info("[TRADING BOT] Time: {} | Order-execution-service | adjustStopPriceIfNeeded (Binance) | " +
+                            "Set reduceOnly=true for TAKE_PROFIT order",
+                            Timestamp.from(Instant.now()));
+                }
+            }
+
+            // Корректируем stopPrice в зависимости от типа ордера
             if (orderType != null && (orderType.contains("TAKE_PROFIT") || orderType.contains("STOP"))) {
-                if (side.equals("BUY")) {
-                    // Для BUY ордера (закрытие SHORT или открытие LONG)
-                    if (orderType.contains("TAKE_PROFIT")) {
-                        // TP для SHORT: stopPrice должен быть ниже текущей цены
+
+                if (orderType.contains("TAKE_PROFIT")) {
+                    // === TAKE PROFIT LOGIC ===
+                    if (side.equals("BUY")) {
+                        // TP для SHORT: stopPrice должен быть НИЖЕ текущей цены
                         double maxAllowedPrice = currentPrice * (1 - minPriceOffset);
                         if (requestedStopPrice >= currentPrice) {
                             adjustedStopPrice = maxAllowedPrice;
                             wasAdjusted = true;
                         }
-                    } else if (orderType.contains("STOP")) {
-                        // Stop Loss для LONG: stopPrice должен быть ниже текущей цены
-                        double maxAllowedPrice = currentPrice * (1 - minPriceOffset);
-                        if (requestedStopPrice >= currentPrice) {
-                            adjustedStopPrice = maxAllowedPrice;
+                    } else { // SELL
+                        // TP для LONG: stopPrice должен быть ВЫШЕ текущей цены
+                        double minAllowedPrice = currentPrice * (1 + minPriceOffset);
+                        if (requestedStopPrice <= currentPrice) {
+                            adjustedStopPrice = minAllowedPrice;
                             wasAdjusted = true;
                         }
                     }
-                } else { // SELL
-                    // Для SELL ордера (закрытие LONG или открытие SHORT)
-                    if (orderType.contains("TAKE_PROFIT")) {
-                        // TP для LONG: stopPrice должен быть выше текущей цены
+                } else if (orderType.contains("STOP")) {
+                    // === STOP LOSS LOGIC (обратная логика!) ===
+                    if (side.equals("BUY")) {
+                        // Stop Loss для SHORT: stopPrice должен быть ВЫШЕ текущей цены
+                        // Срабатывает когда цена растет
                         double minAllowedPrice = currentPrice * (1 + minPriceOffset);
                         if (requestedStopPrice <= currentPrice) {
                             adjustedStopPrice = minAllowedPrice;
                             wasAdjusted = true;
                         }
-                    } else if (orderType.contains("STOP")) {
-                        // Stop Loss для SHORT: stopPrice должен быть выше текущей цены
-                        double minAllowedPrice = currentPrice * (1 + minPriceOffset);
-                        if (requestedStopPrice <= currentPrice) {
-                            adjustedStopPrice = minAllowedPrice;
+                    } else { // SELL
+                        // Stop Loss для LONG: stopPrice должен быть НИЖЕ текущей цены
+                        // Срабатывает когда цена падает
+                        double maxAllowedPrice = currentPrice * (1 - minPriceOffset);
+                        if (requestedStopPrice >= currentPrice) {
+                            adjustedStopPrice = maxAllowedPrice;
                             wasAdjusted = true;
                         }
                     }
