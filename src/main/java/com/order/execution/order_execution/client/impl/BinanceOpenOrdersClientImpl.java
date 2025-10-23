@@ -125,6 +125,12 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
 
     public OrderResponseDto createPerpetualOrder(CreateOrderRequestDto dto) {
         dto.setTimestamp("" + new Timestamp(System.currentTimeMillis()).getTime());
+
+        // Проверяем и корректируем stopPrice для всех ордеров, если он установлен
+        if (dto.getStopPrice() != null && !dto.getStopPrice().isEmpty()) {
+            dto = adjustStopPriceIfNeeded(dto);
+        }
+
         String privateKey = encryptDecryptGenerator.decryptData(dto.getPrivateKey());
         String params = queryParamsGenerator.generatePerpetualParams(dto);
         String signature = SignatureGenerator.generateSignature(privateKey, params);
@@ -150,6 +156,91 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
     }
 
     /**
+     * Корректирует stopPrice для ордера, чтобы избежать ошибки "Order would immediately trigger"
+     */
+    private CreateOrderRequestDto adjustStopPriceIfNeeded(CreateOrderRequestDto dto) {
+        try {
+            String symbol = dto.getSymbol();
+            double currentPrice = getCurrentMarketPrice(symbol);
+
+            if (currentPrice == 0) {
+                log.warn("[TRADING BOT] Time: {} | Order-execution-service | adjustStopPriceIfNeeded (Binance) | " +
+                        "Cannot adjust stopPrice - failed to fetch current market price. Using original stopPrice",
+                        Timestamp.from(Instant.now()));
+                return dto;
+            }
+
+            double requestedStopPrice = Double.parseDouble(dto.getStopPrice());
+            double minPriceOffset = 0.01; // 1% минимальный отступ
+            double adjustedStopPrice = requestedStopPrice;
+            boolean wasAdjusted = false;
+
+            // Определяем тип ордера и направление
+            String orderType = dto.getType();
+            String side = dto.getSide();
+
+            // Для TAKE_PROFIT и STOP_MARKET ордеров
+            if (orderType != null && (orderType.contains("TAKE_PROFIT") || orderType.contains("STOP"))) {
+                if (side.equals("BUY")) {
+                    // Для BUY ордера (закрытие SHORT или открытие LONG)
+                    if (orderType.contains("TAKE_PROFIT")) {
+                        // TP для SHORT: stopPrice должен быть ниже текущей цены
+                        double maxAllowedPrice = currentPrice * (1 - minPriceOffset);
+                        if (requestedStopPrice >= currentPrice) {
+                            adjustedStopPrice = maxAllowedPrice;
+                            wasAdjusted = true;
+                        }
+                    } else if (orderType.contains("STOP")) {
+                        // Stop Loss для LONG: stopPrice должен быть ниже текущей цены
+                        double maxAllowedPrice = currentPrice * (1 - minPriceOffset);
+                        if (requestedStopPrice >= currentPrice) {
+                            adjustedStopPrice = maxAllowedPrice;
+                            wasAdjusted = true;
+                        }
+                    }
+                } else { // SELL
+                    // Для SELL ордера (закрытие LONG или открытие SHORT)
+                    if (orderType.contains("TAKE_PROFIT")) {
+                        // TP для LONG: stopPrice должен быть выше текущей цены
+                        double minAllowedPrice = currentPrice * (1 + minPriceOffset);
+                        if (requestedStopPrice <= currentPrice) {
+                            adjustedStopPrice = minAllowedPrice;
+                            wasAdjusted = true;
+                        }
+                    } else if (orderType.contains("STOP")) {
+                        // Stop Loss для SHORT: stopPrice должен быть выше текущей цены
+                        double minAllowedPrice = currentPrice * (1 + minPriceOffset);
+                        if (requestedStopPrice <= currentPrice) {
+                            adjustedStopPrice = minAllowedPrice;
+                            wasAdjusted = true;
+                        }
+                    }
+                }
+            }
+
+            if (wasAdjusted) {
+                dto.setStopPrice(String.format("%.8f", adjustedStopPrice));
+                log.warn("[TRADING BOT] Time: {} | Order-execution-service | adjustStopPriceIfNeeded (Binance) | " +
+                        "StopPrice adjusted | Symbol: {} | Type: {} | Side: {} | Current Price: {} | " +
+                        "Requested StopPrice: {} | Adjusted StopPrice: {} | Offset: {}%",
+                        Timestamp.from(Instant.now()), symbol, orderType, side, currentPrice,
+                        requestedStopPrice, adjustedStopPrice, minPriceOffset * 100);
+            } else {
+                log.info("[TRADING BOT] Time: {} | Order-execution-service | adjustStopPriceIfNeeded (Binance) | " +
+                        "StopPrice is valid | Symbol: {} | Type: {} | Side: {} | Current Price: {} | StopPrice: {}",
+                        Timestamp.from(Instant.now()), symbol, orderType, side, currentPrice, requestedStopPrice);
+            }
+
+        } catch (Exception e) {
+            log.error("[TRADING BOT] Time: {} | Order-execution-service | adjustStopPriceIfNeeded (Binance) | " +
+                    "Failed to adjust stopPrice: {}. Using original stopPrice",
+                    Timestamp.from(Instant.now()), e.getMessage());
+        }
+
+        return dto;
+    }
+
+    /**
      * Создает ордер для частичного закрытия позиции (Take Profit)
      */
     private void createPartialTakeProfitOrder(CreateOrderRequestDto originalDto) {
@@ -162,22 +253,46 @@ public class BinanceOpenOrdersClientImpl implements OpenOrdersClient {
             String symbol = originalDto.getSymbol();
             double currentPrice = getCurrentMarketPrice(symbol);
 
+            if (currentPrice == 0) {
+                log.error("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
+                        "Cannot create TP order - failed to fetch current market price",
+                        Timestamp.from(Instant.now()));
+                return;
+            }
+
             // Определяем безопасную цену для TP с учетом направления позиции
+            // Минимальный отступ от текущей цены - 1%
             double safeTpPrice;
+            double minPriceOffset = 0.01; // 1% минимальный отступ
+
             if (originalDto.getSide().equals("BUY")) {
                 // Для LONG позиции: TP должен быть выше текущей цены
-                // Берем максимум между заданной ценой и текущей ценой + 0.5%
-                safeTpPrice = Math.max(originalDto.getPartialClosePrice(), currentPrice * 1.005);
+                double minAllowedTpPrice = currentPrice * (1 + minPriceOffset);
+                safeTpPrice = Math.max(originalDto.getPartialClosePrice(), minAllowedTpPrice);
+
+                // Проверяем, что заданная цена не слишком близко к текущей
+                if (originalDto.getPartialClosePrice() <= currentPrice) {
+                    log.warn("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
+                            "Requested TP price ({}) is below or equal to current price ({}). Using safe TP: {}",
+                            Timestamp.from(Instant.now()), originalDto.getPartialClosePrice(), currentPrice, safeTpPrice);
+                }
             } else {
                 // Для SHORT позиции: TP должен быть ниже текущей цены
-                // Берем минимум между заданной ценой и текущей ценой - 0.5%
-                safeTpPrice = Math.min(originalDto.getPartialClosePrice(), currentPrice * 0.995);
+                double maxAllowedTpPrice = currentPrice * (1 - minPriceOffset);
+                safeTpPrice = Math.min(originalDto.getPartialClosePrice(), maxAllowedTpPrice);
+
+                // Проверяем, что заданная цена не слишком близко к текущей
+                if (originalDto.getPartialClosePrice() >= currentPrice) {
+                    log.warn("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
+                            "Requested TP price ({}) is above or equal to current price ({}). Using safe TP: {}",
+                            Timestamp.from(Instant.now()), originalDto.getPartialClosePrice(), currentPrice, safeTpPrice);
+                }
             }
 
             log.info("[TRADING BOT] Time: {} | Order-execution-service | createPartialTakeProfitOrder (Binance) | " +
-                    "TP Price Calculation | Symbol: {} | Side: {} | Current Price: {} | Requested TP: {} | Safe TP: {}",
+                    "TP Price Calculation | Symbol: {} | Side: {} | Current Price: {} | Requested TP: {} | Safe TP: {} | Offset: {}%",
                     Timestamp.from(Instant.now()), symbol, originalDto.getSide(), currentPrice,
-                    originalDto.getPartialClosePrice(), safeTpPrice);
+                    originalDto.getPartialClosePrice(), safeTpPrice, minPriceOffset * 100);
 
             // Создаем DTO для TP ордера
             CreateOrderRequestDto tpDto = CreateOrderRequestDto.builder()
